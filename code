@@ -1,0 +1,93 @@
+import json
+import yaml
+from pathlib import Path
+from datetime import datetime
+from typing import List, Dict, Any
+
+class Config:
+    def __init__(self):
+        self.config_dir = Path.home() / '.calendar_widget'
+        self.config_dir.mkdir(exist_ok=True)
+        self.events_file = self.config_dir / 'events.json'
+        self.settings_file = self.config_dir / 'settings.yaml'
+    
+    def load_settings(self) -> Dict[str, Any]:
+        """Load settings from YAML file or return defaults"""
+        if self.settings_file.exists():
+            try:
+                with open(self.settings_file, 'r') as f:
+                    settings = yaml.safe_load(f)
+                    return settings if settings else self.default_settings()
+            except Exception as e:
+                print(f"Error loading settings: {e}")
+                return self.default_settings()
+        return self.default_settings()
+    
+    def save_settings(self, settings: Dict[str, Any]) -> None:
+        """Save settings to YAML file"""
+        try:
+            with open(self.settings_file, 'w') as f:
+                yaml.dump(settings, f, default_flow_style=False)
+        except Exception as e:
+            print(f"Error saving settings: {e}")
+    
+    def default_settings(self) -> Dict[str, Any]:
+        """Return default settings"""
+        return {
+            'theme': 'dark',
+            'accent_color': '#4A90E2',
+            'opacity': 95,
+            'width': 600,
+            'height': 700,
+            'x': 100,
+            'y': 100,
+            'always_on_top': True
+        }
+    
+    def load_events(self) -> List[Dict[str, Any]]:
+        """Load all events from JSON file"""
+        if self.events_file.exists():
+            try:
+                with open(self.events_file, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Error loading events: {e}")
+                return []
+        return []
+    
+    def save_events(self, events: List[Dict[str, Any]]) -> None:
+        """Save events to JSON file"""
+        try:
+            with open(self.events_file, 'w') as f:
+                json.dump(events, f, indent=2, default=str)
+        except Exception as e:
+            print(f"Error saving events: {e}")
+    
+    def add_event(self, title: str, date: str, event_type: str = 'event') -> None:
+        """Add a new event"""
+        events = self.load_events()
+        event_id = max([e.get('id', 0) for e in events], default=0) + 1
+        
+        events.append({
+            'id': event_id,
+            'title': title,
+            'date': date,
+            'type': event_type,
+            'created_at': datetime.now().isoformat()
+        })
+        self.save_events(events)
+    
+    def remove_event(self, event_id: int) -> None:
+        """Remove an event by ID"""
+        events = self.load_events()
+        events = [e for e in events if e['id'] != event_id]
+        self.save_events(events)
+    
+    def get_events_for_date(self, date: str) -> List[Dict[str, Any]]:
+        """Get all events for a specific date"""
+        events = self.load_events()
+        return [e for e in events if e['date'] == date]
+    
+    def get_all_events(self) -> List[Dict[str, Any]]:
+        """Get all events"""
+        return self.load_events()
